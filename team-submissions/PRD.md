@@ -23,13 +23,9 @@
 **Owner:** Project Lead
 
 ### Choice of Quantum Algorithm
-* **Algorithm:** [Identify the specific algorithm or ansatz]
-    * *Example:* "Quantum Approximate Optimization Algorithm (QAOA) with a hardware-efficient ansatz."
-    * *Example:* "Variational Quantum Eigensolver (VQE) using a custom warm-start initialization."
+* **Algorithm:** Bias-Field Digitized Counterdiabatic Quantum Optimization (BF-DCQO)
 
-* **Motivation:** [Why this algorithm? Connect it to the problem structure or learning goals.]
-    * *Example (Metric-driven):* "We chose QAOA because we believe the layer depth corresponds well to the correlation length of the LABS sequences."
-    *  Example (Skills-driven):* "We selected VQE to maximize skill transfer. Our senior members want to test a novel 'warm-start' adaptation, while the standard implementation provides an accessible ramp-up for our members new to quantum variational methods."
+* **Motivation:** We chose BF_DCQO because our primary goal is to try and reduce the end-to-end time to solution (TTS) of the QE-MTS as the original paper discusses how this is a drawback of the hybrid model compared to the purely classical model. The original paper discussed how TTS can be improved by better initialization and explicitly proposes exporing "adaptive DCQO variants" to increase popilation diversity and lower TTS. Though the authors seem to have tested BF-DCQO and QAOA alone, and MTS with DCQO, they have not explicitly testing MTS with BF-DCQO. From an August 2025 paper on BF-DCQO (listed below), we learened that BF-DCQO runs DCQO iteratively while updating bias diels based on peior samples which can concentratesampling probability and they explicitly mention it is applicable to the LABS problem.
    
 
 ### Literature Review
@@ -43,9 +39,17 @@
     * Provides known correct implementation of LABS solver that we can check our answers to and benchmark with.
 
 #### Quantum Algorithms
-* **Reference:** [Title, Author, Link]
-* **Relevance:** [How does this paper support your plan?]
-    * *Example:* "Reference: 'QAOA for MaxCut.' Relevance: Although LABS is different from MaxCut, this paper demonstrates how parameter concentration can speed up optimization, which we hope to replicate."
+* **Reference:** ["Bias-field digitized counterdiabatic quantum algorithm for higher-order binary optimization", Romero et al., https://www.nature.com/articles/s42005-025-02270-3#:~:text=In%20this%20work%2C%20we%20develop,54%2C55%2C%20among%20others.
+]
+* **Relevance:** 
+  * This paper discusses how to (and the potential advantages of) solving higher order binary optimization problems, explicitly mentioning the LABS problem, using BF-DCQO. This is our main inpiration paper for using BF-DCQO and its discussion of the math behind BF-DCQO will be extremely helpful to implimenting it.
+
+* **Reference:** ["BBias-field Digitized Counterdiabatic Quantum Optimization", Cadavid et al., https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.7.L022010.
+]
+* **Relevance:** 
+  * This paper futher discussed BF-DCQO and how to impliment it and will be was useful in understanding its advantages explitily comparing it to traditional DCQO. It discussed how this method achieved scaling immprovements in ground state success probabilities and explicitly applies this to the ising spin-glass model. Though this talks about a purely quantum algorithmic approach, we hope to build a hybrid model off it.
+
+
 
 ---
 
