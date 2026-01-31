@@ -1,8 +1,10 @@
 # Product Requirements Document (PRD)
 
-**Project Name:** [e.g., LABS-Solv-V1]
-**Team Name:** [e.g., QuantumVibes]
-**GitHub Repository:** [Insert Link Here]
+**Project Name:** LABS Solver
+
+**Team Name:** Squaxions
+
+**GitHub Repository:** https://github.com/chtang-hmc/2026-NVIDIA
 
 ---
 
@@ -17,10 +19,10 @@
 
 | Role | Name | GitHub Handle | Discord Handle
 | :--- | :--- | :--- | :--- |
-| **Project Lead** (Architect) | [Name] | [@handle] | [@handle] |
-| **GPU Acceleration PIC** (Builder) | [Name] | [@handle] | [@handle] |
-| **Quality Assurance PIC** (Verifier) | [Name] | [@handle] | [@handle] |
-| **Technical Marketing PIC** (Storyteller) | [Name] | [@handle] | [@handle] |
+| **Project Lead** (Architect) | Brayden Mendoza | brayjmendoza | BrayJ |
+| **GPU Acceleration PIC** (Builder) | Chengyi Tang | chtang-hmc | chengyitang |
+| **Quality Assurance PIC** (Verifier) | Sofiia Zaozerska, Jiani Fu | szaozerska, fjn004 | sofigoldfox, jiafu1234 |
+| **Technical Marketing PIC** (Storyteller) | Zaara Bhatia | Zaara230761 | zaarabhatia_31348 |
 
 ---
 
@@ -57,8 +59,10 @@
     * *Example:* "The standard MTS evaluates neighbors one by one. We will use `cupy` to rewrite the energy function to evaluate a batch of 1,000 neighbor flips simultaneously on the GPU."
 
 ### Hardware Targets
-* **Dev Environment:** [e.g., Qbraid (CPU) for logic, Brev L4 for initial GPU testing]
-* **Production Environment:** [e.g., Brev A100-80GB for final N=50 benchmarks]
+* **Dev Environment:** We will use Qbraid CPUs for initial testing and code verification, and Brev T4 for initial GPU testing. Our budget will be 10 hours of testing at $0.50/hr. Total budget will be $5.
+* **Production Environment:** We will use the Brev A100-80GB for final benchmarks. Our budget will be 7 hours of benchmark at $1.50/hr. Total budget will be $10.50.
+
+Total amount will be $15.50. We will leave $4.50 buffer in case of extra benchmarking needed or for idle runs.
 
 ---
 
@@ -66,7 +70,7 @@
 **Owner:** Quality Assurance PIC
 
 ### Unit Testing Strategy
-* **Framework:** [e.g., `pytest`, `unittest`]
+* **Framework:** pytest
 * **AI Hallucination Guardrails:** [How do you know the AI code is right?]
     * *Example:* "We will require AI-generated kernels to pass a 'property test' (Hypothesis library) ensuring outputs are always within theoretical energy bounds before they are integrated."
 
@@ -102,3 +106,47 @@
 * **Plan:** [How will you avoid burning all your credits?]
     * *Example:* "We will develop entirely on Qbraid (CPU) until the unit tests pass. We will then spin up a cheap L4 instance on Brev for porting. We will only spin up the expensive A100 instance for the final 2 hours of benchmarking."
     * *Example:* "The GPU Acceleration PIC is responsible for manually shutting down the Brev instance whenever the team takes a meal break."
+
+## 7. Scheduling
+
+- classical algs schedule (Chengyi)
+    -
+    * write tests (15:00)
+    * run tests on qbraid (16:00)
+    * write gpu code (17:00)
+    * run tests on t4 (17:30)
+    * create benchmarking code for classical (22:00)
+    * test small benchmark on t4 (23:00)
+
+- quantum algs schedule (everyone else)
+    -
+    * finish notebook (15:00)
+    * decide which algorithm to use (18:00)
+    * write tests (19:00)
+    * write documentation for algorithm (23:00)
+    * finish code for quantum algorithm (23:00)
+    * iterate if needed
+
+    * run tests on qbraid (0:00)
+    * write gpu code (1:30)
+    * synthesize classical and quantum codebase (2:15)
+        * quantum produces population that feeds to classical
+    * run tests on t4 (2:45)
+    * create benchmarking code for quantum (22:00 from Chengyi)
+    * test small benchmark on t4 (3:30)
+    * run entire benchmark on a100 (8:45)
+
+- presentation schedule (Sofi)
+    - 
+    * need to write documentation throughout
+    * record AI usage and write vibe log
+        * record good/bad ai usage
+    
+    * presentation plan
+    * fill in details
+    * practice presentation
+
+2:30 Finish all coding. Start final benchmarking. Begin working on presentation material.
+8:00 Finish benchmarking, start final work on presentations.
+9:00 Finish writing presentation. Start practicing for presentation. Final checks for code styling and provide documentation for any unclear parts.
+9:50 Submit final submission.
