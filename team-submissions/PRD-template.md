@@ -13,7 +13,7 @@
 
 ---
 
-## 1. Team Roles & Responsibilities
+## 1. Team Roles & Responsibilities [You can DM the judges this information instead of including it in the repository]
 
 | Role | Name | GitHub Handle | Discord Handle
 | :--- | :--- | :--- | :--- |
