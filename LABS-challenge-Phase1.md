@@ -6,7 +6,7 @@
 
 *Goal: Understand the LABS problem and the baseline algorithms.*
 
-Your first task is to complete the provided scaffolded Jupyter Notebook (`labs_tutorial.ipynb`). This notebook guides you through:
+Your first task is to complete the provided scaffolded Jupyter Notebook [01_quantum_enhanced_optimization_LABS.ipynb](https://github.com/iQuHACK/2026-NVIDIA/blob/main/tutorial_notebook/01_quantum_enhanced_optimization_LABS.ipynb). This notebook guides you through:
 
 1. Understanding the LABS symmetry and problem definition.
 2. Running a classical Memetic Tabu Search (MTS).

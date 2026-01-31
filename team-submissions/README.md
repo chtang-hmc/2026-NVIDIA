@@ -1,7 +1,7 @@
 ## Deliverables Checklist
 
-**Step 0:**
-The Project Lead should fork this repository and share the forked repository link with the NVIDIA judges in a DM on discord (`Monica-NVIDIA`, `Linsey-NV Mentor`, and `Iman_nvidia`).
+**Step 0: (Due by noon eastern Sat Jan 31)**
+The Project Lead should fork this repository and share the forked repository link with the NVIDIA judges in a DM on discord (`Monica-NVIDIA`, `Linsey-NV Mentor`, and `Iman_nvidia`).  
 
 **Phase 1 Submission (Due 10pm eastern Sat Jan 31):**
 (To be judged to obtain access to GPUs with Brev credits)
@@ -33,19 +33,19 @@ _Goal: Prove you have a viable strategy before we release GPU credits._
   - **Success Metrics:** Did you define quantifiable targets?
 
 ### Phase 2: The Product (60% - Final Submission)
+*Goal: Prove your solution works, scales, and is verified.*
 
-_Goal: Prove your solution works, scales, and is verified._
-
-- **Performance, Scale, and Creativity [20 points]:**
-  - Does the solution scale to larger $N$?
-  - Did you successfully accelerate the _Classical_ component (e.g., using `cupy` for batch neighbor evaluation) or did you only accelerate the quantum circuit?
-  - We reward the **rigorous implementation of creative ideas**. If your novel experiment fails to beat the baseline, document _why_ in your report. A "Negative Result" backed by great engineering is a success.
-- **Verification [20 points]:**
-  - How much of your code is covered by the `tests.py` suite?
-  - Does the test suite catch physical violations?
-- **Communication & Analysis [20 points]:**
-  - **Visualizations:** We expect professional data plotting. Do not just paste screenshots of code. We want to see generated plots (Time vs. N, Approximation Ratio vs. N) with clearly labeled axes comparing CPU vs. GPU performance.
-  - **The Narrative:** Your presentation must tell the story of "The Plan & The Pivot." Did you identify _why_ you had to change your strategy?
-  - **The AI Report:** Your `AI_REPORT.md` must demonstrate _how_ you verified AI-generated code, including specific examples of "Wins" and "Hallucinations."
+* **Performance, Scale, and Creativity [20 points]:**
+    * Does the solution scale to larger $N$?
+    * Did you successfully accelerate the *Classical* component (e.g., using `cupy` for batch neighbor evaluation) or did you only accelerate the quantum circuit?
+    * We reward the **rigorous implementation of creative ideas**. If your novel experiment fails to beat the baseline, document *why* in your report. A "Negative Result" backed by great engineering is a success.
+    * Make sure to document which GPUs you used for each of your results for fair comparisons
+* **Verification [20 points]:**
+    * How much of your code is covered by the `tests.py` suite?
+    * Does the test suite catch physical violations?
+* **Communication & Analysis [20 points]:**
+    * **Visualizations:** We expect professional data plotting. Do not just paste screenshots of code. We want to see generated plots (Time vs. N, Approximation Ratio vs. N) with clearly labeled axes comparing CPU vs. GPU performance.
+    * **The Narrative:** Your presentation must tell the story of "The Plan & The Pivot." Did you identify *why* you had to change your strategy?
+    * **The AI Report:** Your `AI_REPORT.md` must demonstrate *how* you verified AI-generated code, including specific examples of "Wins" and "Hallucinations."
 
 > For submissions, please place the deliverables in the `teams-submissions` directory of your forked repository and notify the judges.
