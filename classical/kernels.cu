@@ -2,6 +2,7 @@
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
 #include <device_launch_parameters.h>
+#include <stdio.h>
 
 #define POP_SIZE 100 // Fixed population size from paper
 #define MAX_SHARED_INTS                                                        \
