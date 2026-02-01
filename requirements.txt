@@ -1,0 +1,13 @@
+numpy
+pytest
+
+# Used by the Numba CUDA prototype + GPU tests (optional unless running GPU tests).
+numba
+
+# Used for plotting / dataframes in quantum utilities + benchmark analysis scripts.
+pandas
+matplotlib
+
+# Optional (only needed for CUDA-Q quantum sampling on qBraid/Brev).
+# The Python module imported in code is `cudaq`.
+# cuda-quantum

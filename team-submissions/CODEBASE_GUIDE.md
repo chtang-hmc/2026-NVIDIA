@@ -66,6 +66,8 @@ This document is a “map” of the repository: what each folder/file is for, an
   - **Purpose**: Minimal script that calls `quantum_enhanced_mts(...)` with hard-coded parameters (quick manual run).
 
 ### `benchmark/` (benchmark runners that write CSVs)
+All benchmarks were run using qBraid vCPUs and/or H100 GPUs.
+
 - `benchmark/cpu_benchmark.py`
   - **Purpose**: Runs CPU MTS across a range of \(N\), multiple runs, and writes a CSV row per run/N.
   - **Uses**: `classical.mts.MTS(..., record_time=True)` to also record time-to-first-best.
