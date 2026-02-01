@@ -8,7 +8,7 @@ from classical.mts import MTS
 import tutorial_notebook.auxiliary_files.labs_utils as utils
 
 # utilize multiple qubit parallelization
-cudaq.set_target("nvidia", option="mqpu")
+cudaq.set_target("nvidia", option="mgpu")
 
 
 ### CudaQ kernels for 2q and 4q terms ###
@@ -233,7 +233,6 @@ def quantum_population(
         T,
         thetas,
         shots_count=int(shots_count),
-        target="nvidia",
     )
 
     population = []
