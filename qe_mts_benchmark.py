@@ -288,7 +288,9 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--tabu-steps", type=int, default=60)
     p.add_argument("--tabu-tenure", type=int, default=10)
     p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--no-seed", action="store_true", help="Disable deterministic seeding")
+    p.add_argument(
+        "--no-seed", action="store_true", help="Disable deterministic seeding"
+    )
     return p.parse_args()
 
 
@@ -320,4 +322,3 @@ if __name__ == "__main__":
         qparams=qparams_,
         mparams=mparams_,
     )
-
