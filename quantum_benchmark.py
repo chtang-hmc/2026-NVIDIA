@@ -90,7 +90,7 @@ def _run_one(
     """
     # Import here so the benchmark script still imports even if CUDA-Q isn't installed.
     try:
-        from quantum.bfdcqo import bf_dcqo_sampler  # noqa: WPS433
+        from quantum.bfdcqo import quantum_enhanced_mts  # noqa: WPS433
     except Exception as e:
         raise RuntimeError(
             "Failed to import quantum.bfdcqo. Ensure CUDA-Q and dependencies are installed."
@@ -98,73 +98,57 @@ def _run_one(
 
     seed = _quantum_seed(run_idx=run_idx, N=N, base_seed=mparams.seed)
 
-    # (1) BF-DCQO sampling
-    t_total0 = time.perf_counter()
-    t_q0 = time.perf_counter()
-
     if qparams.quiet:
         with redirect_stdout(io.StringIO()):
-            quantum_samples, _energy_hist = bf_dcqo_sampler(
+            results = quantum_enhanced_mts(
                 N=int(N),
-                n_iter=int(qparams.bf_dcqo_iter),
-                n_shots=int(qparams.quantum_shots),
+                pop_size=int(mparams.k),
+                bf_dcqo_iter=int(qparams.bf_dcqo_iter),
+                mts_iter=int(mparams.max_iter),
+                quantum_shots=int(qparams.quantum_shots),
                 alpha=float(qparams.alpha),
                 kappa=float(qparams.kappa),
                 T=float(qparams.T),
-                n_steps=int(qparams.n_steps),
                 theta_cutoff=float(qparams.theta_cutoff),
+                n_steps=int(qparams.n_steps),
+                p_sample=float(mparams.p_sample),
+                p_mutate=float(mparams.p_mutate),
+                tabu_steps=int(mparams.tabu_steps),
+                tabu_tenure=int(mparams.tabu_tenure),
+                seed=seed,
+                record_time=True,
             )
     else:
-        quantum_samples, _energy_hist = bf_dcqo_sampler(
+        results = quantum_enhanced_mts(
             N=int(N),
-            n_iter=int(qparams.bf_dcqo_iter),
-            n_shots=int(qparams.quantum_shots),
+            pop_size=int(mparams.k),
+            bf_dcqo_iter=int(qparams.bf_dcqo_iter),
+            mts_iter=int(mparams.max_iter),
+            quantum_shots=int(qparams.quantum_shots),
             alpha=float(qparams.alpha),
             kappa=float(qparams.kappa),
             T=float(qparams.T),
-            n_steps=int(qparams.n_steps),
             theta_cutoff=float(qparams.theta_cutoff),
+            n_steps=int(qparams.n_steps),
+            p_sample=float(mparams.p_sample),
+            p_mutate=float(mparams.p_mutate),
+            tabu_steps=int(mparams.tabu_steps),
+            tabu_tenure=int(mparams.tabu_tenure),
+            seed=seed,
+            record_time=True,
         )
 
-    quantum_samples = np.asarray(quantum_samples, dtype=np.int8)
-    if quantum_samples.ndim != 2 or quantum_samples.shape[1] != int(N):
-        raise ValueError(
-            f"bf_dcqo_sampler returned invalid sample shape {quantum_samples.shape}, expected (shots, {N})"
-        )
-
-    # Select best k samples by energy (vectorized).
-    k = min(int(mparams.k), int(quantum_samples.shape[0]))
-    Es = mts.energy(quantum_samples).astype(np.int64)
-    elite_idx = np.argsort(Es)[:k]
-    population0 = quantum_samples[elite_idx]
-
-    t_q1 = time.perf_counter()
-
-    # (2) MTS refinement seeded by BF-DCQO population
-    best_s, best_E, _pop, _Es, hist, conv_time = mts.MTS(
-        k=int(population0.shape[0]),
-        N=int(N),
-        target=0,
-        max_iter=int(mparams.max_iter),
-        p_sample=float(mparams.p_sample),
-        p_mutate=float(mparams.p_mutate),
-        tabu_steps=int(mparams.tabu_steps),
-        tabu_tenure=int(mparams.tabu_tenure),
-        population0=population0,
-        seed=seed,
-        record_time=True,
-    )
-
-    t_total1 = time.perf_counter()
-
-    best_E = int(best_E)
-    generations = max(0, int(len(hist)) - 1)
+    best_E = int(results["solution"]["energy"])
+    best_s = np.asarray(results["solution"]["bitstring"], dtype=np.int8)
     seq = _seq_pm1_to_pm(best_s)
     merit = _merit_factor(N, best_E)
 
-    q_sample_time_s = float(t_q1 - t_q0)
-    mts_conv_time_s = float(conv_time) if conv_time is not None else float("nan")
-    total_time_s = float(t_total1 - t_total0)
+    q_sample_time_s = float(results["timing"]["bf_dcqo"])
+    mts_conv_time_s = float(results["timing"].get("mts_convergence", float("nan")))
+    total_time_s = float(results["timing"]["total"])
+
+    hist = results.get("energies", {}).get("mts", [])
+    generations = max(0, int(len(hist)) - 1)
 
     return best_E, q_sample_time_s, mts_conv_time_s, total_time_s, merit, generations, seq
 
@@ -348,8 +332,8 @@ def _parse_args() -> argparse.Namespace:
 
     p.add_argument("--target", type=str, default=None, help="CUDA-Q target name")
     p.add_argument("--shots", type=int, default=1000)
-    p.add_argument("--bf-iters", type=int, default=3)
-    p.add_argument("--theta-cutoff", type=float, default=0.06)
+    p.add_argument("--bf-iters", type=int, default=7)
+    p.add_argument("--theta-cutoff", type=float, default=0.04)
     p.add_argument("--alpha", type=float, default=0.01)
     p.add_argument("--kappa", type=float, default=5.0)
     p.add_argument("--t", type=float, default=1.0, help="Total evolution time T")

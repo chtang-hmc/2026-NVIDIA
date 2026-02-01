@@ -9,7 +9,7 @@ from quantum.qe_mts import get_interactions
 from quantum.qe_mts import r_zz, r_yz, r_zy, r_zzzz, r_yzzz, r_zyzz, r_zzyz, r_zzzy
 from classical.mts import MTS
 
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 def energy(s: np.ndarray) -> np.ndarray:
     """LABS energy.
@@ -275,11 +275,27 @@ def bf_dcqo_sampler(N: int, n_iter: int, n_shots: int,
     # Return samples from final iteration
     return all_samples[-1], energy_history
 
-def quantum_enhanced_mts(N: int, pop_size: int, 
-                        bf_dcqo_iter: int, mts_iter: int,
-                        quantum_shots: int, alpha: float,
-                        kappa: float, T: float, theta_cutoff: float,
-                        use_cvar: bool = True) -> dict:
+def quantum_enhanced_mts(
+    N: int,
+    pop_size: int,
+    bf_dcqo_iter: int,
+    mts_iter: int,
+    quantum_shots: int,
+    alpha: float,
+    kappa: float,
+    T: float,
+    theta_cutoff: float,
+    use_cvar: bool = True,
+    *,
+    n_steps: int = 100,
+    p_sample: float = 0.5,
+    p_mutate: float = 0.02,
+    # Keep default aligned with classical.mts.MTS default unless overridden.
+    tabu_steps: int = 250,
+    tabu_tenure: int = 10,
+    seed: Optional[int] = None,
+    record_time: bool = True,
+) -> dict:
     """
     Complete quantum-enhanced MTS workflow.
     
@@ -301,6 +317,8 @@ def quantum_enhanced_mts(N: int, pop_size: int,
     # print("sanity check of input")
     # print(N, pop_size, bf_dcqo_iter, mts_iter, quantum_shots, alpha, kappa, T)
     
+    total_start_time = time.perf_counter()
+
     # Phase 1: BF-DCQO for initial population
     # print("\n" + "="*60)
     # print("PHASE 1: BF-DCQO Quantum Sampling")
@@ -308,9 +326,14 @@ def quantum_enhanced_mts(N: int, pop_size: int,
     
     start_time = time.perf_counter()
     quantum_samples, bf_dcqo_energies = bf_dcqo_sampler(
-        N, n_iter=bf_dcqo_iter, n_shots=quantum_shots,
-        alpha=alpha, kappa=kappa, T=T, 
-        n_steps=100, theta_cutoff=theta_cutoff
+        N,
+        n_iter=bf_dcqo_iter,
+        n_shots=quantum_shots,
+        alpha=alpha,
+        kappa=kappa,
+        T=T,
+        n_steps=n_steps,
+        theta_cutoff=theta_cutoff,
     )
     end_time = time.perf_counter()
     bf_dcqo_time = end_time - start_time
@@ -337,20 +360,52 @@ def quantum_enhanced_mts(N: int, pop_size: int,
     # print("="*60)
     
     start_time = time.perf_counter()
-    best_s, best_E, final_pop, final_energies, mts_history = MTS(
-        k=len(population), N=N, max_iter=mts_iter, population0=population
-    )
+    if record_time:
+        best_s, best_E, final_pop, final_energies, mts_history, conv_time = MTS(
+            k=len(population),
+            N=N,
+            target=0,
+            max_iter=mts_iter,
+            p_sample=p_sample,
+            p_mutate=p_mutate,
+            tabu_steps=tabu_steps,
+            tabu_tenure=tabu_tenure,
+            population0=population,
+            seed=seed,
+            record_time=True,
+        )
+    else:
+        best_s, best_E, final_pop, final_energies, mts_history = MTS(
+            k=len(population),
+            N=N,
+            target=0,
+            max_iter=mts_iter,
+            p_sample=p_sample,
+            p_mutate=p_mutate,
+            tabu_steps=tabu_steps,
+            tabu_tenure=tabu_tenure,
+            population0=population,
+            seed=seed,
+            record_time=False,
+        )
+        conv_time = None
     end_time = time.perf_counter()
     mts_time = end_time - start_time
     # print("DEBUG ENERGIES", best_E)
     # print("DEBUG S", best_s)
     
     results['timing']['mts'] = mts_time
-    results['timing']['total'] = bf_dcqo_time + mts_time
+    if conv_time is not None:
+        results['timing']['mts_convergence'] = float(conv_time)
+    total_end_time = time.perf_counter()
+    # Wall-clock end-to-end time (includes sampling + population selection + MTS + overhead).
+    results['timing']['total'] = total_end_time - total_start_time
+    # Component sum (historical metric; excludes some overhead like population selection).
+    results['timing']['total_components'] = bf_dcqo_time + mts_time
     results['energies']['mts'] = mts_history
     results['solution'] = {
         'bitstring': best_s,
-        'energy': best_E
+        'energy': int(best_E)
     }
     results['population'] = final_pop
     results['population_energies'] = final_energies
