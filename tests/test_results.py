@@ -18,6 +18,7 @@ import pytest
 import classical.mts as mts
 import quantum.qe_mts as qe_mts
 from cpu_benchmark import BenchmarkParams
+from quantum.bfdcqo import quantum_enhanced_mts
 
 @pytest.fixture
 def params():
@@ -70,9 +71,22 @@ def test_qemts_results(params: BenchmarkParams):
     assert energies == VALIDATION_RESULTS
 
 
-def test_bfdcqa_results():
-    energes = []
+def test_bfdcqo_results():
+    energies = []
+
+    theta_cutoff = 0.06
+    bf_dcqo_iter = 3
+    pop_size = 100
+    mts_iter = 1000
+    alpha = 0.01
+    kappa = 5
+    n_iter = 11
+    T = 1.0
+    
     for n in range(1, 15):
-        pass
+        results = quantum_enhanced_mts(N=n, pop_size=pop_size, bf_dcqo_iter=bf_dcqo_iter, 
+                                      mts_iter=mts_iter, alpha=alpha, kappa=kappa, 
+                                      T=T, theta_cutoff=theta_cutoff, quantum_shots=1000)
+        energies.append(results['solution']['energy'])
         
     assert energies == VALIDATION_RESULTS
