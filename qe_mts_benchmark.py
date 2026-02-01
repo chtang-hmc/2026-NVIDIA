@@ -140,7 +140,7 @@ def run_benchmark(
     N_min: int = 1,
     N_max_inclusive: int = 39,
     runs: int = 25,
-    csv_filename: str = "quantum_benchmark_results.csv",
+    csv_filename: str = "qe_mts_benchmark_results.csv",
     timeout_s: float = 180.0,
     qparams: Optional[QuantumParams] = None,
     mparams: Optional[MTSParams] = None,
