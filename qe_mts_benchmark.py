@@ -82,6 +82,7 @@ def _run_one(
     try:
         import quantum.qe_mts as qe_mts  # noqa: WPS433
     except Exception as e:
+        print(e)
         raise RuntimeError(
             "Failed to import quantum.qe_mts. Ensure CUDA-Q and dependencies are installed."
         ) from e
