@@ -343,6 +343,38 @@ def plot_population_energy_distribution(
     return fig
 
 
+def run_benchmark(
+    Ns,
+    k=100,
+    target=0,
+    max_iter=500,
+    p_sample=0.5,
+    p_mutate=0.02,
+    tabu_steps=250,
+    tabu_tenure=10,
+    seed=None,
+):
+    """Run benchmark for different values of N."""
+    best_E_list = []
+    time_list = []
+    for N in Ns:
+        best_s, best_E, population, energies, best_history, time = MTS(
+            k,
+            N,
+            target,
+            max_iter,
+            p_sample,
+            p_mutate,
+            tabu_steps,
+            tabu_tenure,
+            seed,
+            record_time=True,
+        )
+        best_E_list.append(best_E)
+        time_list.append(time)
+    return best_E_list, time_list
+
+
 __all__ = [
     "generate_bitstrings",
     "energy",
