@@ -13,3 +13,5 @@ __pycache__/
 .env.development.local
 .env.test.local
 pytest.ini
+
+.ipynb_checkpoints/

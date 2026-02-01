@@ -4,7 +4,6 @@ from math import floor
 import tutorial_notebook.auxiliary_files.labs_utils as utils
 import time
 
-# TODO FIX LATER IMPORT
 from quantum.qe_mts import get_interactions
 from quantum.qe_mts import r_zz, r_yz, r_zy, r_zzzz, r_yzzz, r_zyzz, r_zzyz, r_zzzy
 from classical.mts import MTS
@@ -82,8 +81,6 @@ def get_interactions(N):
 
 
 ## BF-DCQO specific functions
-
-
 def bias_angle(hb: float) -> float:
     """
     Ground-state rotation angle for H = σ_x + hb σ_z.
@@ -113,7 +110,6 @@ def biased_trotter_circuit(
     Trotterized circuit with bias-field initialization.
     Combines your existing circuit with bias preparation.
     """
-    # theta_cutoff = 0.05 # TODO: change?
     q = cudaq.qvector(N)
 
     # Initialize with bias-field rotations (Eq. 9 in paper)
