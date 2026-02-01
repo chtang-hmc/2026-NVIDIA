@@ -4,7 +4,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -49,13 +49,17 @@ def _merit_factor(N: int, E: int) -> Optional[float]:
 
 
 def _run_one(
-    N: int, params: BenchmarkParams
+    N: int, run_idx: int, params: BenchmarkParams
 ) -> Tuple[int, float, float, Optional[float], int, str]:
     """
     Returns:
       best_E, conv_time_s, total_time_s, merit_factor, generations, sequence
     """
-    seed = None if params.seed is None else int(params.seed) + int(N)
+    seed = (
+        None
+        if params.seed is None
+        else (int(params.seed) + 10_000 * int(run_idx) + int(N))
+    )
 
     t0 = time.perf_counter()
     best_s, best_E, _pop, _Es, hist, conv_time = mts.MTS(
@@ -86,6 +90,7 @@ def _run_one(
 def run_benchmark(
     N_min: int = 1,
     N_max_inclusive: int = 39,
+    runs: int = 100,
     csv_filename: str = "cpu_benchmark_results.csv",
     timeout_s: float = 60.0,
     params: Optional[BenchmarkParams] = None,
@@ -94,7 +99,7 @@ def run_benchmark(
 
     print("Running CPU benchmark (classical/mts.py)...")
     print(
-        f"{'N':<5} {'Best E':<10} {'Conv. Time':<12} {'Total Time':<12} {'Merit F.':<10} {'Generations':<12} {'Sequence':<20}"
+        f"{'Run':<5} {'N':<5} {'Best E':<10} {'Conv. Time':<12} {'Total Time':<12} {'Merit F.':<10} {'Generations':<12} {'Sequence':<20}"
     )
     print("-" * 100)
 
@@ -103,6 +108,7 @@ def run_benchmark(
         writer = csv.writer(csv_file)
         writer.writerow(
             [
+                "Run",
                 "N",
                 "Best E",
                 "Conv. Time",
@@ -116,39 +122,53 @@ def run_benchmark(
         # Best-effort per-N timeout (mirrors GPU bench behavior).
         old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
         try:
-            for N in range(int(N_min), int(N_max_inclusive) + 1):
-                try:
-                    if timeout_s and timeout_s > 0:
-                        # ITIMER_REAL supports sub-second timeouts.
-                        signal.setitimer(signal.ITIMER_REAL, float(timeout_s))
+            for run_idx in range(1, int(runs) + 1):
+                for N in range(int(N_min), int(N_max_inclusive) + 1):
+                    try:
+                        if timeout_s and timeout_s > 0:
+                            # ITIMER_REAL supports sub-second timeouts.
+                            signal.setitimer(signal.ITIMER_REAL, float(timeout_s))
 
-                    best_E, conv_time_s, total_time_s, merit, generations, seq = (
-                        _run_one(N, params)
-                    )
+                        best_E, conv_time_s, total_time_s, merit, generations, seq = (
+                            _run_one(N, run_idx, params)
+                        )
 
-                    merit_str = "N/A" if merit is None else f"{merit:.6g}"
-                    conv_str = f"{conv_time_s:.12f}"
-                    total_str = f"{total_time_s:.6g}"
+                        merit_str = "N/A" if merit is None else f"{merit:.6g}"
+                        conv_str = f"{conv_time_s:.12f}"
+                        total_str = f"{total_time_s:.6g}"
 
-                    print(
-                        f"{N:<5} {best_E:<10} {conv_str:<12} {total_str:<12} {merit_str:<10} {generations:<12} {seq:<20}"
-                    )
-                    writer.writerow(
-                        [N, best_E, conv_str, total_str, merit_str, generations, seq]
-                    )
-                    csv_file.flush()
+                        print(
+                            f"{run_idx:<5} {N:<5} {best_E:<10} {conv_str:<12} {total_str:<12} {merit_str:<10} {generations:<12} {seq:<20}"
+                        )
+                        writer.writerow(
+                            [
+                                run_idx,
+                                N,
+                                best_E,
+                                conv_str,
+                                total_str,
+                                merit_str,
+                                generations,
+                                seq,
+                            ]
+                        )
+                        csv_file.flush()
 
-                except _Timeout:
-                    print(f"{N:<5} TIMEOUT")
-                    writer.writerow([N, "TIMEOUT", "N/A", "N/A", "N/A", "N/A", ""])
-                    csv_file.flush()
-                except Exception as e:
-                    print(f"{N:<5} ERROR: {e}")
-                    writer.writerow([N, "ERROR", "N/A", "N/A", "N/A", "N/A", ""])
-                    csv_file.flush()
-                finally:
-                    # Cancel alarm for the next iteration.
-                    signal.setitimer(signal.ITIMER_REAL, 0.0)
+                    except _Timeout:
+                        print(f"{run_idx:<5} {N:<5} TIMEOUT")
+                        writer.writerow(
+                            [run_idx, N, "TIMEOUT", "N/A", "N/A", "N/A", "N/A", ""]
+                        )
+                        csv_file.flush()
+                    except Exception as e:
+                        print(f"{run_idx:<5} {N:<5} ERROR: {e}")
+                        writer.writerow(
+                            [run_idx, N, "ERROR", "N/A", "N/A", "N/A", "N/A", ""]
+                        )
+                        csv_file.flush()
+                    finally:
+                        # Cancel alarm for the next iteration.
+                        signal.setitimer(signal.ITIMER_REAL, 0.0)
         finally:
             signal.signal(signal.SIGALRM, old_handler)
 
