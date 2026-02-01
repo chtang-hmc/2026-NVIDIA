@@ -391,12 +391,6 @@ __global__ void memetic_search_kernel(int N, int target_energy, int *stop_flag,
       int move_p = shared_reduction[0];
       int move_delta = shared_reduction[1];
 
-      // Trace Block 0, first few iters
-      if (tid == 0 && bid == 0 && iter < 10) {
-        printf("B0 I%d: CurrE %d, BestDelta %d, MoveP %d\n", iter,
-               current_energy, move_delta, move_p);
-      }
-
       if (move_p != -1) {
         // Update Structures (Thread 0 or Parallel?)
         // update_vectorC is parallel
@@ -434,15 +428,6 @@ __global__ void memetic_search_kernel(int N, int target_energy, int *stop_flag,
       }
       __syncthreads();
     } // End Tabu Loop
-
-    // Progress Print
-    if (tid == 0 && generations % 1000 == 0) {
-      // Optional: verify liveness
-      // Only print from block 0 to avoid spam
-      if (bid == 0)
-        printf("Block %d Gen %d BestE %d\n", bid, generations,
-               global_best_energy[0]);
-    }
 
     // 4. Update Global Best & Population
     if (tid == 0) {
