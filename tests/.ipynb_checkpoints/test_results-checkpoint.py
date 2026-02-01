@@ -17,8 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pytest
 import classical.mts as mts
 import quantum.qe_mts as qe_mts
-from cpu_benchmark import BenchmarkParams
 from quantum.bfdcqo import quantum_enhanced_mts
+from cpu_benchmark import BenchmarkParams
 
 @pytest.fixture
 def params():
@@ -28,6 +28,7 @@ def params():
 VALIDATION_RESULTS = [0, 1, 1, 2, 2, 7, 3, 8, 12, 13, 5, 10, 6, 19]
 
 def test_classical_results(params: BenchmarkParams):
+    """test results for classical MTS"""
     energies = []
     for n in range(1, 15):
         _, best_energy, _, _, _ = mts.MTS(
@@ -47,6 +48,7 @@ def test_classical_results(params: BenchmarkParams):
         
 
 def test_qemts_results(params: BenchmarkParams):
+    """test results for quantum enhanced MTS"""
     energies = []
     for n in range(1, 15):
         # sample a quantum enhanced population
@@ -71,21 +73,20 @@ def test_qemts_results(params: BenchmarkParams):
     assert energies == VALIDATION_RESULTS
 
 
-def test_bfdcqo_results():
+def test_bfdcqo_results(params: BenchmarkParams):
+    """test results for BF-DCQO algorithm"""
     energies = []
 
     theta_cutoff = 0.06
     bf_dcqo_iter = 3
     pop_size = 100
-    mts_iter = 1000
     alpha = 0.01
     kappa = 5
-    n_iter = 11
     T = 1.0
     
     for n in range(1, 15):
-        results = quantum_enhanced_mts(N=n, pop_size=pop_size, bf_dcqo_iter=bf_dcqo_iter, 
-                                      mts_iter=mts_iter, alpha=alpha, kappa=kappa, 
+        results = quantum_enhanced_mts(N=n, pop_size=params.k, bf_dcqo_iter=bf_dcqo_iter, 
+                                      mts_iter=params.max_iter, alpha=alpha, kappa=kappa, 
                                       T=T, theta_cutoff=theta_cutoff, quantum_shots=1000)
         energies.append(results['solution']['energy'])
         
