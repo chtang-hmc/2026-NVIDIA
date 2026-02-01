@@ -1,93 +1,124 @@
-# Verification strategy (MTS / LABS)
+# Test Suite (Classical MTS / QE-MTS / BF-DCQO / GPU parity)
 
-Goal: The goal of verification is to ensure that our Memetic Tabu Search (MTS) implementation is **correct, deterministic when seeded, and internally consistent** before accelerating with CuPy/Numba.
+This document describes how we verify the correctness and reliability of our LABS solvers, based on the **PRD verification goals** and the **tests that actually exist in `tests/`**.
 
-## How to run the code
-- Unit tests: `tests/test_mts.py`
-- Pytest config: `pytest.ini`
+## Verification goals (Definition of Done)
+We consider the solver “verified” when it satisfies:
 
-### How to run
+- **Correctness**: LABS energy computation and incremental tabu updates are correct; solvers return valid \(\{-1,+1\}\) sequences; reported energies match independent recomputation.
+- **Reproducibility**: CPU reference (`classical.mts`) is deterministic when a seed is fixed.
+- **GPU/CPU parity (where applicable)**: GPU kernels preserve invariants (valid bits, energy consistency) and match CPU emulation on small deterministic cases.
 
+## How to run the tests
+
+### Default (fast) test run
 From the repo root:
 
 ```bash
 pytest
 ```
 
-If you’re running in an environment without pytest installed:
+Notes:
+- `pytest.ini` sets `addopts = -q -m "not gpu"`, so **GPU-marked tests are skipped by default**.
+
+### Run only the classical (CPU) unit tests
 
 ```bash
-python -m pip install pytest
-pytest
+pytest tests/test_mts.py
 ```
 
-### Coverage philosophy
+### Run GPU tests (requires CUDA + numba)
 
-We prioritized tests that:
-- Prove the LABS objective is implemented correctly.
-- Validate the incremental-update logic (most likely to break during GPU/Numba refactors).
-- Ensure reproducibility (critical for benchmarking GPU speedups later).
+```bash
+pytest -m gpu
+```
 
-## What we test (and why)
-The section explains approaches we used to verify the correctness of energy computation. The code can be found in `test.py()`. 
+### Run only the quantum module unit tests (requires CUDA-Q / `cudaq`)
 
-## Energy correctness(LABS objective)
-- Known small-case energy matches hand calculation (e.g. all-ones length 4 has energy 14).
-- Batch energy (`(k,N)`) matches single energy (`(N,)`) per-row.
+```bash
+pytest tests/test_qemts.py
+```
 
-## Known invariants / symmetries
-The second approach we use is to employ symmetries: Energy remains constant over a (1) global shift and (2) a sequence reversal. 
-- Global shift: Energy of the Ising model satisfies
-  $$
-  E(s)=E(-s)
-  $$
-  where $s=(s_1, s_2,\dots, s_i)$ is an array of spin values. The test is performed by `_flip(s: np.ndarray, j: int)`, where the function takes an array of spins $s$ and artificially flips them to $-s$. The function is used to validate single-spin flip energy changes. 
+### Run the end-to-end “validation against benchmark results” regression (slow)
+This runs classical MTS, QE-MTS seeding, and BF-DCQO + MTS for \(N=1..14\) and compares energies to a known list from CPU benchmarking.
 
-- Sequence reversal: Consider a spin $s=[s_1, s_2, \dots s_i]$. If reversing the array to $[s_i, s_{i-1}, \dots s_1]$, configurations maintain the same amount of energy. Thus, 
-  $$
-  E(s) = E(s[::-1])
-  $$
-  These invariants are easy to violate if indexing is wrong. 
+```bash
+pytest tests/test_results.py
+```
 
-Note that both global shift and sqeuence reversal are tested by `test_energy_invariants_global_flip_and_reverse`, where energies of $E(s)$, $E(-s)$ are computed and compared. The function returns an error if the equality does not hold.
+## Test inventory (what we test and where)
 
-- Alternating inversion: The function `_alternating_inversion(s)` applies the LABS gauge
-symmetry of 
-  $$
-  s_i\rightarrow (-1)^i s_i
-  $$
-  where 0th,2nd,4th,... 2kth spins are fliiped since they correspond to odd mumber indices $i=1,3,5$.
+### `tests/test_mts.py` — classical correctness + determinism (CPU reference)
+These tests target `classical.mts` and focus on correctness properties that are most likely to break during refactors/GPU ports:
 
+- **Energy correctness (LABS objective)**:
+  - Known hand-checkable sequence: all-ones length 4 has energy \(14\).
+  - \(N=1\) edge case returns energy \(0\).
+  - Scalar vs batch consistency: `energy((N,))` matches per-row of `energy((k,N))`.
+  - Input validation: invalid ranks are rejected.
 
-- **Tabu-search internal math**:
-  - `_delta_energy_for_flip` matches full recomputation after flipping any single bit.
-  - `_apply_flip_in_place` keeps the cached autocorrelation vector consistent with recomputation.
+- **Gauge symmetries / invariants** (property-based correctness checks):
+  - Global inversion: \(E(s)=E(-s)\)
+  - Reversal: \(E(s)=E(s[::-1])\)
+  - Alternating inversion: \(s_i \rightarrow (-1)^i s_i\) (1-based indexing)
+  - Exhaustive verification of invariants for a small \(N\) over all \(2^N\) sequences.
+
+- **Genetic operators**:
+  - `combine(...)` produces a prefix from parent 1 and suffix from parent 2 with cut in \([1, N-1]\), and does not mutate parents.
+  - `mutate_inplace(...)` obeys probability extremes (`p_mut=0` no-op, `p_mut=1` flips all bits) and only mutates its argument.
+
+- **Tabu search incremental-update math**:
+  - `_all_deltas(...)` matches full recomputation for every single-bit flip, and does not mutate inputs.
+  - `_apply_flip_in_place(...)` keeps cached autocorrelation `C` consistent with full recomputation; round-trip (flip twice) is a no-op.
 
 - **Search behavior / reliability**:
-  - `tabu_search()` returns a best solution that is **never worse** than the starting solution.
-  - `MTS()` is **deterministic given a seed**.
-  - `MTS(population0=...)` uses the provided population and returns the correct initial best when `max_iter=0`.
+  - `tabu_search(...)` returns a best energy that is never worse than the starting energy and does not mutate the input.
+  - `MTS(...)` is deterministic given a fixed seed.
+  - `MTS(population0=..., max_iter=0)` returns the correct initial best, and matches exhaustive optimum when `population0` contains all sequences.
 
-## 2D Arrays
-The function `test_energy_single_vs_batch_consistency` verfies that energy behaves identically the same whether we give one or a batch of sequences. Consider a 2D array of `pop` defined as:
-$$\text{pop} = [
-  s₀ = [+1 -1, +1, +1], \\
-  s₁ = [-1, -1, +1, -1],\\
-  s₂ = [+1, +1, +1, -1]\dots]
-$$
-The function `energy(pop)` returns a lsit of energy values $E=[E_1, E_2, E_3, \dots E_i]$ where $E_i$ corresponds to the energy value of the ith spin array. The second way to compute $E_i$ is to extract the ith element from the array using `pop[i]` and then call the function `energy(pop)[i]`. Because the two spin arrays are exactly the same, they have the same energy.
+### `tests/test_mts_cuda.py` — GPU smoke + GPU/CPU parity (skipped by default)
+These tests are marked with `@pytest.mark.gpu` and are skipped by default (see `pytest.ini`).
 
+- **GPU/CPU parity**:
+  - Emulates the kernel logic on CPU and checks exact match for a small case (`N=32`, `max_steps=15`) with 1 walker.
 
-## Verification for the Spin Array Input
-Population generated by exercise 5 of phase 1 uses binary digits of 0 and 1. Spin values of the Ising model are $\pm 1$ only. Thus, in order to comute energy correctly, one must convert the binary array to $\pm$, which is done by `generate_bitstrings(k, N, seed)`. The verification checks the following aspects:
-1. All spins array have a length greater or equal to 1. For small $N$ for testing case, we restrict $N$ under 16 to reduce computational efforts. 
-2. A shape of $(k, N)$, where $k$ is the number of spin sequence and $N$ is the length of each spin array. 
-3. values must be $\pm 1$
-4. Deterministic when seed is fixed
+- **GPU smoke**:
+  - Confirms GPU returns a valid \(\{-1,+1\}\) sequence and that the returned energy matches `energy(s)` recomputed on CPU.
 
-The first property, a length between 1 to 16, is verified by `_all_bitstrings_pm1(N: int)`, where we input an array and verify its length.
+Important practical note:
+- The GPU tests currently import `mts_cuda` and `mts` as top-level modules. In this repo the CPU reference implementation is `classical.mts`, and the current CUDA prototype is in `classical/mts_cuda_old.py`. If you do not have root-level wrappers/modules named `mts.py` and `mts_cuda.py`, GPU tests will fail on import even if CUDA is available.
 
-Properties 2 to 4 are verified by the function `test_generate_bitstrings_shape_and_values()`, where we artifically generate a bistrings of shape $(k, N)=(7, 13)$ and verify if there exist a mismatch in dimension or a elements whose spin valu $s_i\notin \{-1, 1\}$ using assert().
+### `tests/test_qemts.py` — quantum-population utilities (CUDA-Q)
+These tests verify the `quantum.qe_mts` building blocks:
 
+- `get_interactions(N)` returns correctly-shaped 2-body and 4-body interaction index lists with valid ranges.
+- `bitstring_convert(...)` maps CUDA-Q bitstrings to spins in \(\{-1,+1\}\).
+- `quantum_population(...)` respects `popsize` and yields spin arrays of shape `(N,)`.
+  - Uses mocking (`unittest.mock.patch`) to make sampling deterministic for unit testing.
+- `qe_mts(population)` runs and returns an MTS-style tuple for a valid population.
 
+### `tests/test_results.py` — end-to-end regression vs benchmark energies
+These tests compare solver outputs against `VALIDATION_RESULTS` for \(N=1..14\):
 
+- **Classical MTS regression**: `classical.mts.MTS(...)` energies match the recorded list.
+- **QE-MTS regression**: seeds MTS from `quantum.qe_mts.quantum_population(...)` and checks energies match the recorded list.
+- **BF-DCQO regression**: runs `quantum.bfdcqo.quantum_enhanced_mts(...)` and checks energies match the recorded list.
+
+## Traceability to PRD verification plan
+This test suite directly supports the PRD verification goals:
+
+- **Correctness**:
+  - Objective function correctness + invariants: `tests/test_mts.py`
+  - Quantum population validity: `tests/test_qemts.py`
+  - End-to-end agreement with known results: `tests/test_results.py`
+
+- **Reproducibility**:
+  - Deterministic seeded CPU behavior: `tests/test_mts.py::test_mts_deterministic_with_seed`
+
+- **GPU/CPU parity**:
+  - Deterministic parity + smoke: `tests/test_mts_cuda.py` (opt-in via `pytest -m gpu`)
+
+## Expected environments / prerequisites
+- **CPU-only quick verification**: Python + `pytest` + `numpy` is sufficient for `tests/test_mts.py`.
+- **Quantum tests**: require CUDA-Q Python package (`cudaq`) available (e.g., qBraid CUDA-Q environment).
+- **GPU tests**: require `numba` with `numba.cuda.is_available() == True` and the expected GPU entrypoint modules importable.
