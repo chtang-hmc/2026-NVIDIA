@@ -229,7 +229,7 @@ __global__ void memetic_search_kernel(int N, int target_energy, int *stop_flag,
           }
           // Log
           int log_idx = *log_count;
-          if (log_idx < 1000) {
+          if (log_idx < 100000) {
             log_time[log_idx] = clock64();
             log_energy[log_idx] = current_pop_e;
             *log_count = log_idx + 1;

@@ -65,8 +65,8 @@ int main(int argc, char **argv) {
   int *d_log_count;
   int *d_lock;
 
-  CHECK_CUDA(cudaMalloc(&d_log_time, 1000 * sizeof(long long)));
-  CHECK_CUDA(cudaMalloc(&d_log_energy, 1000 * sizeof(int)));
+  CHECK_CUDA(cudaMalloc(&d_log_time, 100000 * sizeof(long long)));
+  CHECK_CUDA(cudaMalloc(&d_log_energy, 100000 * sizeof(int)));
   CHECK_CUDA(cudaMalloc(&d_log_count, sizeof(int)));
   CHECK_CUDA(cudaMalloc(&d_lock, sizeof(int)));
 
@@ -166,8 +166,8 @@ int main(int argc, char **argv) {
   CHECK_CUDA(cudaMemcpy(&h_log_count, d_log_count, sizeof(int),
                         cudaMemcpyDeviceToHost));
 
-  if (h_log_count > 1000)
-    h_log_count = 1000;
+  if (h_log_count > 100000)
+    h_log_count = 100000;
 
   std::vector<long long> h_log_time(h_log_count);
   std::vector<int> h_log_energy(h_log_count);
