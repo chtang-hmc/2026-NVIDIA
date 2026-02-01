@@ -40,6 +40,7 @@ import numpy as np
 # Unchanged helpers (already efficient or not on the hot path)
 # ---------------------------------------------------------------------------
 
+
 def generate_bitstrings(k: int, N: int, seed: Optional[int] = None) -> np.ndarray:
     rng = np.random.default_rng(seed)
     return rng.choice(np.array([-1, 1], dtype=np.int8), size=(k, N))
@@ -77,6 +78,7 @@ def _autocorr_vector(s: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # Vectorised hot-path primitives
 # ---------------------------------------------------------------------------
+
 
 def _all_deltas(s64: np.ndarray, C: np.ndarray, D: np.ndarray) -> np.ndarray:
     """Compute delta_E for flipping every bit j — fully vectorised, no Python loop over lags.
@@ -116,7 +118,7 @@ def _all_deltas(s64: np.ndarray, C: np.ndarray, D: np.ndarray) -> np.ndarray:
     D *= -2
 
     # Contract: delta_E(j) = sum_k  D[k-1,j] * (2*C[k] + D[k-1,j])
-    C_col = C[1:, np.newaxis]                # (N-1, 1)
+    C_col = C[1:, np.newaxis]  # (N-1, 1)
     deltas = (D * (2 * C_col + D)).sum(axis=0)  # (N,)
 
     return deltas
@@ -133,24 +135,25 @@ def _apply_flip_in_place(s: np.ndarray, s64: np.ndarray, C: np.ndarray, j: int) 
     j   : int         index to flip
     """
     N = s.shape[0]
-    factor = np.int64(-2) * s64[j]   # -2 * s[j], scalar int64
+    factor = np.int64(-2) * s64[j]  # -2 * s[j], scalar int64
 
     # Right neighbours: lags 1 .. N-j-1  ->  C[1:N-j] += factor * s64[j+1:N]
     if j < N - 1:
-        C[1: N - j] += factor * s64[j + 1: N]
+        C[1 : N - j] += factor * s64[j + 1 : N]
 
     # Left neighbours: lags 1 .. j  ->  C[k] += factor * s64[j-k]  for k=1..j
     # s64[j-k] for k=1..j  is  s64[j-1], s64[j-2], ..., s64[0]  =  s64[j-1::-1]
     if j > 0:
-        C[1: j + 1] += factor * s64[j - 1::-1]
+        C[1 : j + 1] += factor * s64[j - 1 :: -1]
 
-    s[j]   = -s[j]
+    s[j] = -s[j]
     s64[j] = -s64[j]
 
 
 # ---------------------------------------------------------------------------
 # Tabu search — fully vectorised move evaluation
 # ---------------------------------------------------------------------------
+
 
 def tabu_search(
     s0: np.ndarray,
@@ -169,7 +172,7 @@ def tabu_search(
 
     s = np.asarray(s0, dtype=np.int8).copy()
     N = s.shape[0]
-    s64 = s.astype(np.int64)          # persistent int64 mirror; updated in sync with s
+    s64 = s.astype(np.int64)  # persistent int64 mirror; updated in sync with s
 
     C = _autocorr_vector(s)
     E = int(np.sum(C[1:] * C[1:]))
@@ -177,8 +180,8 @@ def tabu_search(
     best_s = s.copy()
     best_E = E
 
-    tabu_expire = np.zeros(N, dtype=np.int64)           # tabu_expire[j] = step when tabu lifts
-    D_scratch   = np.empty((N - 1, N), dtype=np.int64)  # reused scratch for _all_deltas
+    tabu_expire = np.zeros(N, dtype=np.int64)  # tabu_expire[j] = step when tabu lifts
+    D_scratch = np.empty((N - 1, N), dtype=np.int64)  # reused scratch for _all_deltas
     stall = 0
 
     INF = np.iinfo(np.int64).max
@@ -188,13 +191,15 @@ def tabu_search(
             break
 
         # --- evaluate all N flips at once ---
-        deltas = _all_deltas(s64, C, D_scratch)           # (N,) int64
-        cand_E = E + deltas                               # (N,) candidate energies
+        deltas = _all_deltas(s64, C, D_scratch)  # (N,) int64
+        cand_E = E + deltas  # (N,) candidate energies
 
         # --- admissibility mask ---
-        is_tabu = tabu_expire > step                      # (N,) bool
-        aspiration = cand_E < best_E                      # (N,) bool: tabu move allowed if it beats global best
-        admissible = (~is_tabu) | aspiration              # (N,) bool
+        is_tabu = tabu_expire > step  # (N,) bool
+        aspiration = (
+            cand_E < best_E
+        )  # (N,) bool: tabu move allowed if it beats global best
+        admissible = (~is_tabu) | aspiration  # (N,) bool
 
         # --- pick best admissible move ---
         # Set inadmissible candidates to +INF so argmin ignores them.
@@ -202,13 +207,13 @@ def tabu_search(
         best_move_j = int(np.argmin(masked))
 
         if masked[best_move_j] == INF:
-            break       # no admissible move exists
+            break  # no admissible move exists
 
         chosen_delta = int(deltas[best_move_j])
 
         # --- apply move ---
         _apply_flip_in_place(s, s64, C, best_move_j)
-        E += chosen_delta                                 # exact; no recomputation needed
+        E += chosen_delta  # exact; no recomputation needed
 
         # --- tabu tenure with jitter ---
         jitter = int(rng.integers(0, max(1, tabu_tenure // 3 + 1)))
@@ -231,7 +236,10 @@ def tabu_search(
 # MTS outer loop
 # ---------------------------------------------------------------------------
 
-def combine(p1: np.ndarray, p2: np.ndarray, rng: np.random.Generator, out: np.ndarray) -> None:
+
+def combine(
+    p1: np.ndarray, p2: np.ndarray, rng: np.random.Generator, out: np.ndarray
+) -> None:
     """One-point crossover written into pre-allocated `out`."""
     N = p1.shape[0]
     cut = int(rng.integers(1, N))
@@ -310,7 +318,7 @@ def MTS(
         # (a) sample or combine — write into pre-allocated `child`
         if rng.random() < p_sample:
             idx = int(rng.integers(0, k))
-            child[:] = population[idx]          # copy into buffer
+            child[:] = population[idx]  # copy into buffer
         else:
             i1, i2 = rng.choice(k, size=2, replace=False)
             combine(population[int(i1)], population[int(i2)], rng, child)
@@ -412,7 +420,7 @@ __all__ = [
     "generate_bitstrings",
     "energy",
     "combine",
-    "mutate",
+    "mutate_inplace",
     "tabu_search",
     "MTS",
     "plot_population_energy_distribution",
