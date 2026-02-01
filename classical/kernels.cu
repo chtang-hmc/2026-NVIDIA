@@ -221,7 +221,9 @@ __global__ void memetic_search_kernel(int N, int target_energy, int *stop_flag,
 
   // Memetic Loop
   int generations = 0;
-  while (!(*stop_flag) && generations < 1000000) { // Safety break
+  // Memetic Loop
+  int generations = 0;
+  while (!(*stop_flag) && generations < 100000) { // Safety break
     generations++;
 
     // 2. Selection (Thread 0)
@@ -430,10 +432,12 @@ __global__ void memetic_search_kernel(int N, int target_energy, int *stop_flag,
     } // End Tabu Loop
 
     // Progress Print
-    if (tid == 0 && generations % 1000 == 0) {
+    if (tid == 0 && generations % 10000 == 0) {
       // Optional: verify liveness
-      // printf("Block %d Gen %d BestE %d\n", bid, generations,
-      // global_best_energy[0]);
+      // Only print from block 0 to avoid spam
+      if (bid == 0)
+        printf("Block %d Gen %d BestE %d\n", bid, generations,
+               global_best_energy[0]);
     }
 
     // 4. Update Global Best & Population
