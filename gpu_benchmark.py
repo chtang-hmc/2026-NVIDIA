@@ -36,6 +36,9 @@ def run_benchmark():
                 # Set a timeout just in case
                 proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
                 output = proc.stdout
+            except subprocess.TimeoutExpired:
+                print(f"N={N}: TIMEOUT")
+                continue
             
             # Parse Output
             best_e_match = re.search(r"Best Energy Found: (-?\d+)", output)
